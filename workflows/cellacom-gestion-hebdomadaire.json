@@ -1,0 +1,71 @@
+{
+  "name": "CellaCom - Gestion hebdomadaire",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "weeks", "triggerAtDay": [1], "triggerAtHour": 9}]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 304],
+      "id": "schedule-trigger",
+      "name": "Tous les lundis 9h"
+    },
+    {
+      "parameters": {
+        "url": "https://discord.com/api/v10/guilds/{{GUILD_ID}}/members",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "discordBotApi",
+        "sendQuery": true,
+        "queryParameters": {"parameters": [{"name": "limit", "value": "1000"}]},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [224, 208],
+      "id": "get-members",
+      "name": "Récupérer membres Discord"
+    },
+    {
+      "parameters": {
+        "documentId": {"__rl": true, "value": "{{GOOGLE_SHEET_ID}}", "mode": "id"},
+        "sheetName": {"__rl": true, "value": "gid=0", "mode": "id"},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [224, 400],
+      "id": "get-sheet",
+      "name": "Récupérer Google Sheet",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {"mode": "combine", "combineBy": "combineAll", "options": {}},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [448, 304],
+      "id": "merge-data",
+      "name": "Attendre les deux"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ROLE_INCONNU = '{{ROLE_INCONNU_ID}}';\nconst MAX_NOUVEAUX_PAR_SEMAINE = 20;\nconst now = new Date();\nconst FOUR_WEEKS_MS = 28 * 24 * 60 * 60 * 1000;\n\nconst discordItems = $('Récupérer membres Discord').all();\nconst discordMembers = discordItems.map(item => item.json);\n\nconst sheetItems = $('Récupérer Google Sheet').all();\nconst sheetData = sheetItems.map(item => item.json).filter(item => item.userId);\n\nconst accueillisIds = new Set(sheetData.map(s => String(s.userId)));\n\nconst allDiscordMemberIds = new Set(\n  discordMembers.filter(m => m.user && !m.user.bot).map(m => m.user.id)\n);\n\nconst tousNouveaux = [];\nconst aKick = [];\nconst aNettoyer = [];\n\nfor (const member of discordMembers) {\n  if (!member.roles || !member.roles.includes(ROLE_INCONNU)) continue;\n  if (member.user && member.user.bot) continue;\n  const userId = member.user.id;\n  if (!accueillisIds.has(userId)) {\n    tousNouveaux.push({\n      userId: userId,\n      username: member.user.username,\n      globalName: member.user.global_name || member.user.username,\n      joinedAt: member.joined_at\n    });\n  }\n}\n\ntousNouveaux.sort((a, b) => new Date(a.joinedAt) - new Date(b.joinedAt));\nconst nouveaux = tousNouveaux.slice(0, MAX_NOUVEAUX_PAR_SEMAINE);\nconst reportes = tousNouveaux.length - nouveaux.length;\n\nconst membresInconnusIds = new Set(\n  discordMembers\n    .filter(m => m.roles && m.roles.includes(ROLE_INCONNU) && m.user && !m.user.bot)\n    .map(m => m.user.id)\n);\n\nfor (const entry of sheetData) {\n  const dateLimite = new Date(entry.dateLimite);\n  const entryUserId = String(entry.userId);\n  if (!allDiscordMemberIds.has(entryUserId)) {\n    aNettoyer.push({userId: entry.userId, username: entry.username, dateLimite: entry.dateLimite, raison: 'parti'});\n  } else if (now >= dateLimite && membresInconnusIds.has(entryUserId)) {\n    aKick.push({userId: entry.userId, username: entry.username, dateLimite: entry.dateLimite});\n  } else if (!membresInconnusIds.has(entryUserId) && allDiscordMemberIds.has(entryUserId)) {\n    aNettoyer.push({userId: entry.userId, username: entry.username, dateLimite: entry.dateLimite, raison: 'devenu_membre'});\n  }\n}\n\nconst dateLimite = new Date(now.getTime() + FOUR_WEEKS_MS);\nconst dateLimiteStr = dateLimite.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });\nconst dateAccueilStr = now.toISOString().split('T')[0];\nconst dateLimiteISO = dateLimite.toISOString().split('T')[0];\n\nreturn [{json: {nouveaux, aKick, aNettoyer, nombreNouveaux: nouveaux.length, nombreAKick: aKick.length, nombreANettoyer: aNettoyer.length, reportes, dateLimiteStr, dateAccueilStr, dateLimiteISO}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [672, 304],
+      "id": "process-members",
+      "name": "Analyser les membres"
+    }
+  ],
+  "connections": {
+    "Tous les lundis 9h": {"main": [[{"node": "Récupérer membres Discord", "type": "main", "index": 0}, {"node": "Récupérer Google Sheet", "type": "main", "index": 0}]]},
+    "Récupérer membres Discord": {"main": [[{"node": "Attendre les deux", "type": "main", "index": 0}]]},
+    "Récupérer Google Sheet": {"main": [[{"node": "Attendre les deux", "type": "main", "index": 1}]]},
+    "Attendre les deux": {"main": [[{"node": "Analyser les membres", "type": "main", "index": 0}]]}
+  },
+  "settings": {"executionOrder": "v1", "timezone": "Europe/Paris"},
+  "_comment": "Workflow simplifié pour référence. Les credentials et IDs sensibles sont remplacés par des placeholders {{...}}"
+}
