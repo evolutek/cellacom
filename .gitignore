@@ -1,0 +1,39 @@
+# Clever Cloud config (user-specific)
+.clever.json
+
+# Claude Code
+.claude/
+CLAUDE.md
+
+# Environment variables (sensitive data)
+.env
+.env.local
+.env.*.local
+
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# PM2
+.pm2/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/

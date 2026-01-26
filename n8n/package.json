@@ -1,0 +1,26 @@
+{
+  "name": "cellacom-n8n",
+  "version": "1.0.0",
+  "description": "n8n workflow automation for Evolutek",
+  "scripts": {
+    "start": "n8n"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Evolutek/cellacom.git"
+  },
+  "keywords": [
+    "n8n",
+    "evolutek",
+    "cellacom",
+    "automation"
+  ],
+  "author": "Evolutek",
+  "license": "MIT",
+  "dependencies": {
+    "n8n": "^2.4.6"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

@@ -1,0 +1,18 @@
+# Clever Cloud config (user-specific)
+.clever.json
+
+# Dependencies
+node_modules/
+
+# Environment files (secrets!)
+.env
+.env.*
+
+# n8n data (local dev)
+.n8n/
+
+# Package manager locks (keep bun.lock for Clever Cloud Bun detection)
+package-lock.json
+
+# OS files
+.DS_Store
